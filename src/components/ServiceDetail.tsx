@@ -1,14 +1,17 @@
-import { ExternalLink, Award, Building2, Layers } from 'lucide-react';
+import { ExternalLink, Award, Building2, Layers, CheckCircle2 } from 'lucide-react';
 import { AWSService } from '@/data/awsServices';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MermaidDiagram } from './MermaidDiagram';
+import { useServiceCompletions } from '@/hooks/useServiceCompletions';
 
 interface ServiceDetailProps {
   service: AWSService | null;
 }
 
 export function ServiceDetail({ service }: ServiceDetailProps) {
+  const { isCompleted, toggleCompletion } = useServiceCompletions();
   if (!service) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-surface">
@@ -47,61 +50,128 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
   };
 
   const generateArchitectureDiagram = (serviceName: string) => {
-    // Mermaid diagram based on service type
     if (serviceName.includes('EC2')) {
       return `
         graph TB
-          User[User] --> LB[Load Balancer]
-          LB --> EC2A[EC2 Instance A]
-          LB --> EC2B[EC2 Instance B]
-          EC2A --> RDS[(RDS Database)]
+          Users[👥 Users] --> ALB[Application Load Balancer]
+          ALB --> ASG[Auto Scaling Group]
+          ASG --> EC2A[EC2 Instance A]
+          ASG --> EC2B[EC2 Instance B]
+          ASG --> EC2C[EC2 Instance N...]
+          EC2A --> RDS[(🗄️ RDS Multi-AZ)]
           EC2B --> RDS
-          EC2A --> S3[S3 Storage]
+          EC2C --> RDS
+          EC2A --> S3[📦 S3 Storage]
           EC2B --> S3
+          EC2C --> S3
+          EC2A --> CW[📊 CloudWatch]
+          EC2B --> CW
+          EC2C --> CW
+          RDS --> BackupS3[💾 S3 Backup]
       `;
     } else if (serviceName.includes('Lambda')) {
       return `
-        graph LR
-          Event[Event Source] --> Lambda[AWS Lambda]
-          Lambda --> DDB[(DynamoDB)]
-          Lambda --> S3[S3 Storage]
-          Lambda --> CW[CloudWatch Logs]
+        graph TB
+          API[🌐 API Gateway] --> Lambda[⚡ Lambda Function]
+          S3Event[📦 S3 Events] --> Lambda
+          Schedule[⏰ EventBridge] --> Lambda
+          Lambda --> DDB[(🗃️ DynamoDB)]
+          Lambda --> S3[📦 S3 Storage]
+          Lambda --> SNS[📨 SNS]
+          Lambda --> CW[📊 CloudWatch Logs]
+          Lambda --> X[🔗 External APIs]
+          DDB --> Stream[🌊 DDB Stream]
+          Stream --> Lambda2[⚡ Stream Processor]
       `;
     } else if (serviceName.includes('S3')) {
       return `
         graph TB
-          App[Application] --> S3[S3 Bucket]
-          Web[Web Browser] --> CF[CloudFront CDN]
-          CF --> S3
-          S3 --> Lifecycle[Lifecycle Rules]
-          Lifecycle --> Glacier[S3 Glacier]
+          Users[👥 Users] --> CF[🌍 CloudFront CDN]
+          CF --> S3[📦 S3 Bucket]
+          Apps[📱 Applications] --> S3
+          S3 --> IA[❄️ S3-IA]
+          IA --> Glacier[🧊 S3 Glacier]
+          S3 --> Replication[🔄 Cross-Region Replication]
+          S3 --> Versioning[📝 Versioning]
+          S3 --> Lifecycle[♻️ Lifecycle Rules]
+          S3 --> Analytics[📈 S3 Analytics]
       `;
     } else if (serviceName.includes('RDS')) {
       return `
         graph TB
-          App[Application] --> RDS[RDS Instance]
-          RDS --> Standby[Standby Instance]
-          RDS --> Snapshot[Automated Snapshots]
-          RDS --> Logs[CloudWatch Logs]
+          Apps[📱 Applications] --> RDS[🗄️ RDS Primary]
+          RDS --> Standby[🔄 Multi-AZ Standby]
+          RDS --> ReadReplica[📖 Read Replicas]
+          RDS --> Backup[💾 Automated Backup]
+          RDS --> Snapshot[📸 Manual Snapshots]
+          RDS --> CW[📊 CloudWatch Metrics]
+          RDS --> ParamGroup[⚙️ Parameter Groups]
+          Backup --> S3[📦 S3 Storage]
+          Snapshot --> S3
       `;
     } else if (serviceName.includes('VPC')) {
       return `
         graph TB
-          Internet[Internet Gateway] --> VPC[VPC]
-          VPC --> PubSub[Public Subnet]
-          VPC --> PrivSub[Private Subnet]
-          PubSub --> Web[Web Servers]
-          PrivSub --> DB[Database Servers]
-          PrivSub --> NAT[NAT Gateway]
-          NAT --> Internet
+          Internet[🌐 Internet Gateway] --> VPC[🏠 VPC 10.0.0.0/16]
+          VPC --> PubSub1[🌍 Public Subnet A]
+          VPC --> PubSub2[🌍 Public Subnet B]
+          VPC --> PrivSub1[🔒 Private Subnet A]
+          VPC --> PrivSub2[🔒 Private Subnet B]
+          PubSub1 --> LB[⚖️ Load Balancer]
+          PubSub2 --> LB
+          LB --> PrivSub1
+          LB --> PrivSub2
+          PrivSub1 --> NAT1[🚪 NAT Gateway A]
+          PrivSub2 --> NAT2[🚪 NAT Gateway B]
+          NAT1 --> Internet
+          NAT2 --> Internet
+      `;
+    } else if (serviceName.includes('DynamoDB')) {
+      return `
+        graph TB
+          Apps[📱 Applications] --> DDB[🗃️ DynamoDB Table]
+          DDB --> GSI[🔍 Global Secondary Index]
+          DDB --> LSI[📋 Local Secondary Index]
+          DDB --> Stream[🌊 DynamoDB Stream]
+          Stream --> Lambda[⚡ Lambda Trigger]
+          DDB --> DAX[⚡ DynamoDB Accelerator]
+          DDB --> Backup[💾 Point-in-Time Recovery]
+          DDB --> CrossRegion[🌍 Global Tables]
+      `;
+    } else if (serviceName.includes('CloudWatch')) {
+      return `
+        graph TB
+          EC2[🖥️ EC2] --> CW[📊 CloudWatch]
+          RDS[🗄️ RDS] --> CW
+          Lambda[⚡ Lambda] --> CW
+          S3[📦 S3] --> CW
+          CW --> Metrics[📈 Custom Metrics]
+          CW --> Logs[📝 CloudWatch Logs]
+          CW --> Alarms[🚨 CloudWatch Alarms]
+          Alarms --> SNS[📨 SNS Notifications]
+          Alarms --> ASG[📏 Auto Scaling]
+          CW --> Dashboard[📱 CloudWatch Dashboard]
+      `;
+    } else if (serviceName.includes('IAM')) {
+      return `
+        graph TB
+          Users[👥 IAM Users] --> Roles[🎭 IAM Roles]
+          Users --> Groups[👥 IAM Groups]
+          Groups --> Policies[📜 IAM Policies]
+          Roles --> Policies
+          Policies --> Resources[🔐 AWS Resources]
+          EC2[🖥️ EC2] --> InstanceProfile[🏷️ Instance Profile]
+          InstanceProfile --> Roles
+          Federation[🔗 Identity Federation] --> Roles
       `;
     }
     
     return `
       graph TB
-        User[User] --> Service[${serviceName}]
-        Service --> Output[Output]
-        Service --> Monitor[CloudWatch]
+        Users[👥 Users] --> Service[☁️ ${serviceName}]
+        Service --> Output[📤 Output]
+        Service --> Monitor[📊 CloudWatch]
+        Service --> Logs[📝 Logs]
     `;
   };
 
@@ -123,6 +193,15 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
                     SAA-C03 Critical
                   </Badge>
                 )}
+                <Button
+                  size="sm"
+                  variant={isCompleted(service.name) ? "default" : "outline"}
+                  onClick={() => toggleCompletion(service.name)}
+                  className="ml-auto"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  {isCompleted(service.name) ? "Completed" : "Mark Complete"}
+                </Button>
               </div>
               
               <div className="flex items-center gap-4">
@@ -171,16 +250,15 @@ export function ServiceDetail({ service }: ServiceDetailProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted/30 rounded-lg p-4">
-              <div className="text-center py-8 text-muted-foreground">
-                <Building2 className="h-12 w-12 mx-auto mb-2" />
-                <p>Architecture diagram for {service.name}</p>
-                <p className="text-xs mt-1">Mermaid diagram integration coming soon</p>
-              </div>
+            <div className="bg-muted/30 rounded-lg p-6">
+              <MermaidDiagram 
+                chart={generateArchitectureDiagram(service.name)}
+                className="w-full"
+              />
             </div>
             <p className="text-sm text-muted-foreground mt-3">
               This diagram shows a typical architecture pattern for {service.name} 
-              and how it integrates with other AWS services.
+              and how it integrates with other AWS services in a production environment.
             </p>
           </CardContent>
         </Card>

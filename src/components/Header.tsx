@@ -1,14 +1,15 @@
-import { Cloud, MessageSquare } from 'lucide-react';
+import { Cloud, CheckCircle2 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  onChatToggle: () => void;
+  showCompletedOnly: boolean;
+  onToggleCompleted: () => void;
 }
 
-export function Header({ searchTerm, onSearchChange, onChatToggle }: HeaderProps) {
+export function Header({ searchTerm, onSearchChange, showCompletedOnly, onToggleCompleted }: HeaderProps) {
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="h-full px-6 flex items-center justify-between">
@@ -39,13 +40,13 @@ export function Header({ searchTerm, onSearchChange, onChatToggle }: HeaderProps
         {/* Actions */}
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
+            variant={showCompletedOnly ? "default" : "outline"}
             size="sm"
-            onClick={onChatToggle}
+            onClick={onToggleCompleted}
             className="flex items-center gap-2 hover:bg-primary/10"
           >
-            <MessageSquare className="h-4 w-4" />
-            AI Assistant
+            <CheckCircle2 className="h-4 w-4" />
+            {showCompletedOnly ? "Show All" : "Completed Only"}
           </Button>
         </div>
       </div>

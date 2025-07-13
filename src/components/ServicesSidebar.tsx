@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Award } from 'lucide-react';
+import { ChevronDown, ChevronRight, Award, CheckCircle2 } from 'lucide-react';
 import { ServiceCategory, AWSService } from '@/data/awsServices';
+import { useServiceCompletions } from '@/hooks/useServiceCompletions';
 import { cn } from '@/lib/utils';
 
 interface ServicesSidebarProps {
@@ -8,14 +9,17 @@ interface ServicesSidebarProps {
   onServiceSelect: (service: AWSService) => void;
   selectedService: AWSService | null;
   searchTerm: string;
+  showCompletedOnly: boolean;
 }
 
 export function ServicesSidebar({ 
   categories, 
   onServiceSelect, 
   selectedService, 
-  searchTerm 
+  searchTerm,
+  showCompletedOnly
 }: ServicesSidebarProps) {
+  const { isCompleted, toggleCompletion } = useServiceCompletions();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['Compute', 'Storage']) // Default expanded categories
   );
@@ -31,11 +35,22 @@ export function ServicesSidebar({
   };
 
   const filterServices = (services: AWSService[]) => {
-    if (!searchTerm) return services;
-    return services.filter(service =>
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = services;
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(service =>
+        service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by completion status
+    if (showCompletedOnly) {
+      filtered = filtered.filter(service => isCompleted(service.name));
+    }
+    
+    return filtered;
   };
 
   const filteredCategories = categories
@@ -81,26 +96,41 @@ export function ServicesSidebar({
             {expandedCategories.has(category.category) && (
               <div className="ml-6 mt-1 space-y-1">
                 {category.services.map((service) => (
-                  <button
-                    key={service.name}
-                    onClick={() => onServiceSelect(service)}
-                    className={cn(
-                      "w-full flex items-center gap-2 p-2 rounded-md text-left text-sm",
-                      "hover:bg-primary/10 transition-colors duration-fast",
-                      "focus:outline-none focus:ring-2 focus:ring-ring",
-                      selectedService?.name === service.name && 
-                      "bg-primary/20 text-primary font-medium"
-                    )}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate">{service.name}</span>
-                        {service.isExamCritical && (
-                          <Award className="h-3 w-3 text-accent shrink-0" />
-                        )}
+                  <div key={service.name} className="flex items-center gap-1">
+                    <button
+                      onClick={() => toggleCompletion(service.name)}
+                      className={cn(
+                        "p-1 rounded-sm hover:bg-primary/10 transition-colors",
+                        isCompleted(service.name) && "text-emerald-600"
+                      )}
+                      title={isCompleted(service.name) ? "Mark as incomplete" : "Mark as complete"}
+                    >
+                      <CheckCircle2 className={cn(
+                        "h-3 w-3",
+                        isCompleted(service.name) ? "fill-current" : "stroke-current"
+                      )} />
+                    </button>
+                    <button
+                      onClick={() => onServiceSelect(service)}
+                      className={cn(
+                        "flex-1 flex items-center gap-2 p-2 rounded-md text-left text-sm",
+                        "hover:bg-primary/10 transition-colors duration-fast",
+                        "focus:outline-none focus:ring-2 focus:ring-ring",
+                        selectedService?.name === service.name && 
+                        "bg-primary/20 text-primary font-medium",
+                        isCompleted(service.name) && "bg-emerald-50 dark:bg-emerald-950/20"
+                      )}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{service.name}</span>
+                          {service.isExamCritical && (
+                            <Award className="h-3 w-3 text-accent shrink-0" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

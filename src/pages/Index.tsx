@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { Header } from '@/components/Header';
 import { ServicesSidebar } from '@/components/ServicesSidebar';
 import { ServiceDetail } from '@/components/ServiceDetail';
-import { ChatPanel } from '@/components/ChatPanel';
 import { awsServicesData } from '@/data/awsServices';
 import { AWSService } from '@/data/awsServices';
 
 const Index = () => {
   const [selectedService, setSelectedService] = useState<AWSService | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
 
   const handleServiceSelect = (service: AWSService) => {
     setSelectedService(service);
@@ -23,8 +22,8 @@ const Index = () => {
     }
   };
 
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
+  const toggleCompleted = () => {
+    setShowCompletedOnly(!showCompletedOnly);
   };
 
   return (
@@ -33,7 +32,8 @@ const Index = () => {
       <Header
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
-        onChatToggle={toggleChat}
+        showCompletedOnly={showCompletedOnly}
+        onToggleCompleted={toggleCompleted}
       />
 
       {/* Main Content */}
@@ -44,13 +44,11 @@ const Index = () => {
           onServiceSelect={handleServiceSelect}
           selectedService={selectedService}
           searchTerm={searchTerm}
+          showCompletedOnly={showCompletedOnly}
         />
 
         {/* Main Content Area */}
         <ServiceDetail service={selectedService} />
-
-        {/* Chat Panel */}
-        <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </div>
     </div>
   );
